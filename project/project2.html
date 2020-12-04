@@ -1,0 +1,663 @@
+---
+title: 'Project 2: Modeling, Testing, and Predicting'
+author: "SDS348"
+date: ''
+output:
+  html_document:
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+---
+
+<link href="/rmarkdown-libs/anchor-sections/anchor-sections.css" rel="stylesheet" />
+<script src="/rmarkdown-libs/anchor-sections/anchor-sections.js"></script>
+
+
+<div id="modeling" class="section level1">
+<h1>Modeling</h1>
+<div id="instructions" class="section level2">
+<h2>Instructions</h2>
+<p>A knitted R Markdown document (preferably HTML) and the raw R Markdown file (as .Rmd) should both be submitted to Canvas by 11:59pm on the due date. These two documents will be graded jointly, so they must be consistent (i.e., don’t change the R Markdown file without also updating the knitted document). Knit an html copy too, for later! In the .Rmd file for Project 2, you can copy the first code-chunk into your project .Rmd file to get better formatting. Notice that you can adjust the opts_chunk$set(…) above to set certain parameters if necessary to make the knitting cleaner (you can globally set the size of all plots, etc). You can copy the set-up chunk in Project2.Rmd: I have gone ahead and set a few for you (such as disabling warnings and package-loading messges when knitting)!</p>
+<p>Like before, I envision your written text forming something of a narrative structure around your code/output. All results presented must have corresponding code. Any answers/results/plots etc. given without the corresponding R code that generated the result will not be graded. Furthermore, all code contained in our project document should work properly. Please do not include any extraneous code or code which produces error messages. (Code which produces warnings is fine as long as you understand what the warnings mean.)</p>
+</div>
+<div id="find-data" class="section level2">
+<h2>Find data:</h2>
+<p>Find one dataset with at least 5 variables (ideally more!) that you want to use to build models/test hypotheses. At least one should be categorical (with 2-5 groups, ideally; definitely fewer than 10) and at least two should be numeric (taking on more than 10 distinct values). Ideally, at least of your variables will be binary (if not, you will have to create one by discretizing a numeric or collapsing levels of a categorical). You will need a minimum of 40 observations (<em>at least</em> 10 observations for every explanatory variable you have, ideally 20+ observations/variable).</p>
+<p>It is perfectly fine to use either dataset (or the merged dataset, or a subset of your variables) from Project 1. However, I might encourage you to diversify things a bit and choose a different dataset to work with (particularly if the variables did not reveal interesting associations in Project 1 that you want to follow up with). The only requirement/restriction is that you may not use data from any examples we have done in class or lab. It would be a good idea to pick more cohesive data this time around (i.e., variables that you actually thing might have a relationship you would want to test). Think more along the lines of your Biostats project.</p>
+<p>Again, you can use data from anywhere you want (see bottom for resources)! If you want a quick way to see whether a built-in (R) dataset has binary and/or character (i.e., categorical) variables, check out this list: <a href="https://vincentarelbundock.github.io/Rdatasets/datasets.html" class="uri">https://vincentarelbundock.github.io/Rdatasets/datasets.html</a>.</p>
+</div>
+<div id="guidelines-and-rubric" class="section level2">
+<h2>Guidelines and Rubric</h2>
+<ul>
+<li><strong>0. (5 pts)</strong> Introduce your dataset and each of your variables (or just your main variables if you have lots) in a paragraph. What are they measuring? How many observations?</li>
+</ul>
+<pre class="r"><code>library(fivethirtyeight)
+library(plyr)
+library(dplyr)
+library(tidyr)
+congress &lt;- sample_n(congress_age, 1000, replace=FALSE)
+congress &lt;- congress %&gt;% mutate(incumbent = as.numeric(incumbent))
+congress &lt;- congress %&gt;% separate(termstart, c(&quot;termyr&quot;, &quot;termmo&quot;, &quot;termday&quot;), sep=&quot;-&quot;)
+congress$termyr &lt;- as.numeric(congress$termyr)
+congress$termday &lt;- as.numeric(congress$termday)
+congress$age &lt;- as.numeric(congress$age)
+congress$district &lt;- as.numeric(congress$congress)
+congress &lt;- congress %&gt;% dplyr::select(-c(&quot;termmo&quot;, &quot;congress&quot;, &quot;bioguide&quot;, &quot;suffix&quot;, &quot;middlename&quot;))
+head(congress)</code></pre>
+<pre><code>## # A tibble: 6 x 11
+## chamber firstname lastname birthday state party
+incumbent termyr termday age district
+## &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;date&gt; &lt;chr&gt; &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+&lt;dbl&gt; &lt;dbl&gt;
+## 1 house Shelley Capito 1953-11-26 WV R 1 2007 4 53.1 110
+## 2 house Henry Hyde 1924-04-18 IL R 1 1987 6 62.7 100
+## 3 senate Edwin Garn 1932-10-12 UT R 1 1981 5 48.2 97
+## 4 house Jon Kyl 1942-04-25 AZ R 1 1989 3 46.7 101
+## 5 house Augustine Kelley 1883-07-09 PA D 1 1951 3 67.5
+82
+## 6 house Albert Quie 1923-09-18 MN R 1 1967 10 43.3 90</code></pre>
+<p>I used the congress dataset from fivethirtyeight which has information about various Congress members, both from the House and the Senate. For this project, I limited the amount of observations in my data to 1000 to make some of the future computations less taxing and complicated to deal with. For each congressperson, there is a chamber (House or Senate), first name, last name, birthday, state (that they’re elected to serve), party, incumbency (whether they are currently holding the seat or challenging), term start date (split into year and day), age, and district number. In the next section we will also create a new categorical variable which will hold the decade that their term started in for our MANOVA tests.</p>
+<ul>
+<li><strong>1. (15 pts)</strong> Perform a MANOVA testing whether any of your numeric variables (or a subset of them, if including them all is unreasonable or doesn’t make sense) show a mean difference across levels of one of your categorical variables (3). If they do, perform univariate ANOVAs to find response(s) showing a mean difference across groups (3), and perform post-hoc t tests to find which groups differ (3). Discuss the number of tests you have performed, calculate the probability of at least one type I error (if unadjusted), and adjust the significance level accordingly (bonferroni correction) before discussing significant differences (3). Briefly discuss MANOVA assumptions and whether or not they are likely to have been met (no need for anything too in-depth) (2).</li>
+</ul>
+<pre class="r"><code>#make categorcal column with many levels containing decade of term start
+congress &lt;- congress %&gt;% mutate(decade = round_any(termyr, 10))
+man&lt;-manova(cbind(district, age)~decade, data=congress)
+summary(man)</code></pre>
+<pre><code>## Df Pillai approx F num Df den Df Pr(&gt;F)
+## decade 1 0.97769 21850 2 997 &lt; 2.2e-16 ***
+## Residuals 998
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1</code></pre>
+<pre class="r"><code>summary.aov(man)</code></pre>
+<pre><code>## Response district :
+## Df Sum Sq Mean Sq F value Pr(&gt;F)
+## decade 1 90241 90241 43693 &lt; 2.2e-16 ***
+## Residuals 998 2061 2
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1
+##
+## Response age :
+## Df Sum Sq Mean Sq F value Pr(&gt;F)
+## decade 1 2146 2146.07 19.212 1.294e-05 ***
+## Residuals 998 111483 111.71
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1</code></pre>
+<pre class="r"><code>#individual t-tests
+pairwise.t.test(congress$district,congress$decade, p.adj=&quot;none&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  congress$district and congress$decade 
+## 
+##      1950   1960   1970   1980   1990   2000  
+## 1960 &lt;2e-16 -      -      -      -      -     
+## 1970 &lt;2e-16 &lt;2e-16 -      -      -      -     
+## 1980 &lt;2e-16 &lt;2e-16 &lt;2e-16 -      -      -     
+## 1990 &lt;2e-16 &lt;2e-16 &lt;2e-16 &lt;2e-16 -      -     
+## 2000 &lt;2e-16 &lt;2e-16 &lt;2e-16 &lt;2e-16 &lt;2e-16 -     
+## 2010 &lt;2e-16 &lt;2e-16 &lt;2e-16 &lt;2e-16 &lt;2e-16 &lt;2e-16
+## 
+## P value adjustment method: none</code></pre>
+<pre class="r"><code>pairwise.t.test(congress$age,congress$decade, p.adj=&quot;none&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  congress$age and congress$decade 
+## 
+##      1950    1960    1970    1980    1990    2000   
+## 1960 0.43419 -       -       -       -       -      
+## 1970 0.78111 0.57905 -       -       -       -      
+## 1980 0.02139 0.07634 0.02451 -       -       -      
+## 1990 0.89548 0.33507 0.66489 0.01110 -       -      
+## 2000 0.22853 0.02087 0.09537 5.9e-05 0.26844 -      
+## 2010 0.00026 8.1e-07 1.8e-05 1.7e-10 0.00026 0.00369
+## 
+## P value adjustment method: none</code></pre>
+<pre class="r"><code>library(rstatix)
+group &lt;- congress$decade 
+DVs &lt;- congress %&gt;% dplyr::select(district,age)
+#Test multivariate normality for each group (null: assumption met)
+sapply(split(DVs,group), mshapiro_test)</code></pre>
+<pre><code>## 1950 1960 1970 1980 1990 2000 2010
+## statistic 0.9888106 0.9933498 0.9904304 0.9922499
+0.9477605 0.9948295 0.9889299
+## p.value 0.5482109 0.6113486 0.3987167 0.5531743
+0.0001699882 0.7953374 0.4627175</code></pre>
+<pre class="r"><code>#If any p&lt;.05, stop. If not, test homogeneity of covariance matrices
+#Box&#39;s M test (null: assumption met)
+box_m(DVs, group)</code></pre>
+<pre><code>## # A tibble: 1 x 4
+## statistic p.value parameter method
+## &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;
+## 1 91.6 7.49e-12 18 Box&#39;s M-test for Homogeneity of
+Covariance Matrices</code></pre>
+<pre class="r"><code>#covariance matrices for each group
+lapply(split(DVs,group), cov)</code></pre>
+<pre><code>## $`1950`
+##            district         age
+## district  1.4675424  -0.1149534
+## age      -0.1149534 109.2756539
+## 
+## $`1960`
+##           district         age
+## district 2.6375698   0.5641018
+## age      0.5641018 126.4923067
+## 
+## $`1970`
+##            district         age
+## district  1.3282119  -0.1240044
+## age      -0.1240044 100.8616362
+## 
+## $`1980`
+##            district         age
+## district  3.0508748  -0.7657744
+## age      -0.7657744 138.2773833
+## 
+## $`1990`
+##           district         age
+## district 1.2250471   0.3696074
+## age      0.3696074 104.3199363
+## 
+## $`2000`
+##          district       age
+## district 2.670507  3.129366
+## age      3.129366 85.566992
+## 
+## $`2010`
+##          district       age
+## district 1.252137  1.952623
+## age      1.952623 95.476650</code></pre>
+<pre class="r"><code>#drop decade column since we&#39;re done using it
+congress &lt;- congress %&gt;% dplyr::select(-c(decade))</code></pre>
+<p>We find that we can reject the null hypothesis of the MANOVA and say that there is a difference between levels of the two groups, so we perform univariate ANOVA tests, and they also prove to have significant p-values. The pair-wise t-tests yields
+that all district levels are significant but it seems around three of the years show significant p-values (therefore differences between variables) and the rest don’t. We conducted 1 MANOVA, 2 ANOVA, and 43 t tests (for a total of 45 tests). To determine if our test yielded significant results, we use our Bonferroni correction to obtain our alpha value, which is computed by α = 0.5/45 = 0.011. The probability of at least one type I error is calculated by 1-(0.95)^45 = 0.901. MANOVA normality seems to be okay as there are no values below 0.5 in our groups. However, for Box’s M-test we get a significant p-value which means that we can’t say that there is homogeneity in our covariance matrices. Therefore, it’s not likely at all that we met our MANOVA assumptions.</p>
+<ul>
+<li><strong>2. (10 pts)</strong> Perform some kind of randomization test on your data (that makes sense). The statistic can be anything you want (mean difference, correlation, F-statistic/ANOVA, chi-squared), etc. State null and alternative hypotheses, perform the test, and interpret the results (7). Create a plot visualizing the null distribution and the test statistic (3).</li>
+</ul>
+<pre class="r"><code>library(ggplot2)
+
+chisq.test(table(congress$party, congress$state))</code></pre>
+<pre><code>## 
+##  Pearson&#39;s Chi-squared test
+## 
+## data:  table(congress$party, congress$state)
+## X-squared = 230.44, df = 147, p-value = 1.315e-05</code></pre>
+<pre class="r"><code>#REJECT NULL HYPOTHESIS, NOT INDEPENDENT. IT&#39;S WHAT WE EXPECT!
+# create visualization of test statistic
+X2&lt;-vector()
+for(i in 1:10000){  
+  samp&lt;-sample(factor(c(congress$party, congress$state)),40,replace=T) 
+  obs&lt;-table(samp) 
+  exp&lt;-c(20,20) 
+  X2[i]&lt;-sum((obs-exp)^2/exp) 
+}
+X2 &lt;- data.frame(X2)
+ggplot(X2, aes(X2)) + geom_histogram(fill=&quot;black&quot;, colour=&quot;black&quot;, alpha = 0.25, binwidth=0.5) + geom_density(aes(y=0.55*..count..), colour=&quot;black&quot;, adjust=4) </code></pre>
+<p><img src="public/project/project2_files/figure-html/unnamed-chunk-3-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p>I decided to conduct a chi-squred test to determine independence between the party of a congressperson in relation to the state that they were elected to. Our null hypothesis is that these two categories are indpendent, while our alternate hypothesis is that there is dependence between these two categories. The p-value we obtain from this test is 2.15e-12 which is definitely significant, and so we must reject the null hypothesis and say that there is a dependence between the party and state that a congressperson holds (which, if you think about it, makes sense). There’s also a graph of the distribution of the repeated calculation of the chi-squared statistic, and a density line has been added to show how it follows the general chi-squared distribution graph.</p>
+<ul>
+<li><strong>3. (35 pts)</strong> Build a linear regression model predicting one of your response variables from at least 2 other variables, including their interaction. Mean-center any numeric variables involved in the interaction.</li>
+</ul>
+<pre class="r"><code>congress$MCDay &lt;- congress$termday - mean(congress$termday)
+congress$MCYear &lt;- congress$termyr - mean(congress$termyr)
+
+lm_fit&lt;-lm(age~MCDay*MCYear, data=congress)
+summary(lm_fit)</code></pre>
+<pre><code>##
+## Call:
+## lm(formula = age ~ MCDay * MCYear, data = congress)
+##
+## Residuals:
+## Min 1Q Median 3Q Max
+## -27.751 -7.480 -0.446 7.161 33.368
+##
+## Coefficients:
+## Estimate Std. Error t value Pr(&gt;|t|)
+## (Intercept) 53.868178 0.338255 159.253 &lt; 2e-16 ***
+## MCDay -0.003995 0.112235 -0.036 0.972
+## MCYear 0.089668 0.021120 4.246 2.38e-05 ***
+## MCDay:MCYear 0.009123 0.010075 0.906 0.365
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1
+##
+## Residual standard error: 10.56 on 996 degrees of freedom
+## Multiple R-squared: 0.02222, Adjusted R-squared: 0.01928
+## F-statistic: 7.545 on 3 and 996 DF, p-value: 5.405e-05</code></pre>
+<pre><code>- Interpret the coefficient estimates (do not discuss significance) (10)
+
+Our regression summary indicates that at average levels of day and year, the response variable, age of the person,
+should be at around 53.37. For an increase of 1 in start term day, there is a -0.01 decrease in age, and for an increase
+of 1 in start term year, there is an increase of 0.06 in age. The coefficient for the interaction of term day and
+term year captures the difference of one variable depending on the level of the other variable. Therefore the slope of 
+term day is around 0.02 higher per increase of term year.
+
+- Plot the regression using `ggplot()` using geom_smooth(method=&quot;lm&quot;). If your interaction is numeric by numeric, refer to code in the slides to make the plot or check out the `interactions` package, which makes this easier. If you have 3 or more predictors, just chose two of them to plot for convenience. (8)</code></pre>
+<pre class="r"><code>library(interactions)
+interact_plot(lm_fit, pred=MCDay, modx=MCYear, interval=T, x.label = &quot;Term Day&quot;, y.label= &quot;Age&quot;)</code></pre>
+<p><img src="public/project/project2_files/figure-html/unnamed-chunk-5-1.png" width="768" style="display: block; margin: auto;" /></p>
+<pre><code>- Check assumptions of linearity, normality, and homoskedasticity either graphically or using a hypothesis test (4)</code></pre>
+<pre class="r"><code>library(sandwich)
+library(lmtest)
+resids &lt;- lm_fit$residuals
+fitted&lt;- lm_fit$fitted.values
+ggplot() + geom_histogram(aes(resids), bins=10)</code></pre>
+<p><img src="public/project/project2_files/figure-html/unnamed-chunk-6-1.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ggplot() + geom_point(aes(fitted, resids))+geom_hline(yintercept=0, color=&#39;red&#39;)</code></pre>
+<p><img src="public/project/project2_files/figure-html/unnamed-chunk-6-2.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>bptest(lm_fit)</code></pre>
+<pre><code>## 
+##  studentized Breusch-Pagan test
+## 
+## data:  lm_fit
+## BP = 14.093, df = 3, p-value = 0.002782</code></pre>
+<pre class="r"><code>ggplot()+geom_histogram(aes(resids),bins=20)</code></pre>
+<p><img src="public/project/project2_files/figure-html/unnamed-chunk-6-3.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>#graph still looks roughly normal although p-value is not strong
+ks.test(resids, &quot;pnorm&quot;, sd=sd(resids))</code></pre>
+<pre><code>## 
+##  One-sample Kolmogorov-Smirnov test
+## 
+## data:  resids
+## D = 0.021751, p-value = 0.7314
+## alternative hypothesis: two-sided</code></pre>
+<pre class="r"><code>#uncorrected SE
+summary(lm_fit)$coef[,1:2]</code></pre>
+<pre><code>##                  Estimate Std. Error
+## (Intercept)  53.868178161 0.33825530
+## MCDay        -0.003995019 0.11223490
+## MCYear        0.089667690 0.02111968
+## MCDay:MCYear  0.009123130 0.01007469</code></pre>
+<pre><code>We can see, therefore, that there doesn&#39;t seem to be any violations as the histograms are roughly normal and the
+p-values are not low enough to be significant, and therefore reject these assumptions.
+
+- Regardless, recompute regression results with robust standard errors via `coeftest(..., vcov=vcovHC(...))`. Discuss significance of results, including any changes from before/after robust SEs if applicable. (8)</code></pre>
+<pre class="r"><code># Robust SE test (note: not much change...)
+coeftest(lm_fit, vcov = vcovHC(lm_fit))</code></pre>
+<pre><code>##
+## t test of coefficients:
+##
+## Estimate Std. Error t value Pr(&gt;|t|)
+## (Intercept) 53.8681782 0.3442345 156.4869 &lt; 2.2e-16 ***
+## MCDay -0.0039950 0.1275555 -0.0313 0.9750
+## MCYear 0.0896677 0.0211052 4.2486 2.353e-05 ***
+## MCDay:MCYear 0.0091231 0.0103154 0.8844 0.3767
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1</code></pre>
+<pre><code>There is not much of a change from our previous uncorrected SEs that we calculated in the section above. Overall 
+the robust standard errors have all slightly increased from our previous SE calculations in order to better prevent
+violating homoskedasticity. Through the standard errors we can see the average distance of our values in relation
+to the regression line.
+
+- What proportion of the variation in the outcome does your model explain? (4)</code></pre>
+<pre class="r"><code>#R-squared or proportion of variation outcome of model explains
+(sum((congress$age-mean(congress$age))^2)-sum(lm_fit$residuals^2))/
+  sum((congress$age-mean(congress$age))^2)</code></pre>
+<pre><code>## [1] 0.02222048</code></pre>
+<pre><code>Our model explains around 2% of the variation in the outcome.</code></pre>
+<ul>
+<li><strong>4. (5 pts)</strong> Rerun same regression model (with the interaction), but this time compute bootstrapped standard errors (either by resampling observations or residuals). Discuss any changes you observe in SEs and p-values using these SEs compared to the original SEs and the robust SEs)</li>
+</ul>
+<pre class="r"><code>boot_dat &lt;- sample_frac(congress, replace=T)
+
+samp_distn&lt;-replicate(5000, {
+  boot_dat &lt;- sample_frac(congress, replace=T)
+  fit &lt;- lm(age~MCDay*MCYear, data=boot_dat)
+  coef(fit)
+}) 
+#seem to be around the same
+samp_distn %&gt;% t %&gt;% as.data.frame %&gt;% summarize_all(sd)</code></pre>
+<pre><code>##   (Intercept)     MCDay     MCYear MCDay:MCYear
+## 1   0.3434297 0.1271177 0.02061077   0.01025169</code></pre>
+<p>There doesn’t seem to be much of a change at all between the bootstrapped SEs and the robust SEs calculated in the previous
+section.</p>
+<ul>
+<li><p><strong>5. (25 pts)</strong> Fit a logistic regression model predicting a binary variable (if you don’t have one, make/get one) from at least two explanatory variables (interaction not necessary).</p>
+<ul>
+<li>Interpret coefficient estimates in context (10)</li>
+</ul></li>
+</ul>
+<pre class="r"><code>log_fit&lt;-glm(incumbent~age+district, data=congress, family=&quot;binomial&quot;)
+coeftest(log_fit)</code></pre>
+<pre><code>##
+## z test of coefficients:
+##
+## Estimate Std. Error z value Pr(&gt;|z|)
+## (Intercept) -3.1130996 1.0616976 -2.9322 0.003366 **
+## age 0.0918506 0.0105722 8.6880 &lt; 2.2e-16 ***
+## district 0.0028067 0.0105881 0.2651 0.790950
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1</code></pre>
+<pre class="r"><code>congress$probs &lt;- predict(log_fit, type=&quot;response&quot;)
+probs &lt;- predict(log_fit, type=&quot;response&quot;)</code></pre>
+<pre><code>The intercept can be interpreted as the odds of incumbency based on age and district of 0. The coefficient for age 
+represents that for every additional increase in 1 year of age, controlling for district, the odds of incumbency 
+increases by a factor of 0.089. Meanwhile, the coefficient for district depresents taht for every additional increase
+by 1, controlling for age, represents a decrease of a factor of -0.0009 on incumbency.
+
+- Report a confusion matrix for your logistic regression (2)</code></pre>
+<pre class="r"><code>table(prediction=as.numeric(probs&gt;.5), congress$incumbent)</code></pre>
+<pre><code>##           
+## prediction   0   1
+##          0   9   0
+##          1 134 857</code></pre>
+<pre><code>- Compute and discuss the Accuracy, Sensitivity (TPR), Specificity (TNR), Precision (PPV), and AUC of your model (5)</code></pre>
+<pre class="r"><code>#sensitivity
+mean(congress[congress$incumbent==1,]$probs&gt;.5)</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>#specificity
+mean(congress[congress$incumbent==0,]$probs&lt;.5)</code></pre>
+<pre><code>## [1] 0.06293706</code></pre>
+<pre class="r"><code>pred&lt;-ifelse(congress$probs&gt;.5,1,0)
+#accuracy
+mean(congress$incumbent==pred)</code></pre>
+<pre><code>## [1] 0.866</code></pre>
+<pre class="r"><code>#precision
+sum(congress$probs&gt;.5 &amp; congress$incumbent==1)/sum(congress$probs&gt;.5)</code></pre>
+<pre><code>## [1] 0.864783</code></pre>
+<pre class="r"><code>#compute AUC
+library(plotROC)
+ROCplot&lt;-ggplot(congress)+geom_roc(aes(d=incumbent,m=probs), n.cuts=0)+
+  geom_segment(aes(x=0,xend=1,y=0,yend=1),lty=2)
+calc_auc(ROCplot)</code></pre>
+<pre><code>##   PANEL group       AUC
+## 1     1    -1 0.7333967</code></pre>
+<pre><code>The sensitivity or TPR is great at around 0.9989, the specificity or TNR is horrible at around 0.032, the accuracy is
+pretty good, coming out at around 0.849, and the precision is also good coming at around 0.849 as well. The AUC is 
+pretty fair and comes out to around 0.73 which reflects how likely we are to predict our observations to the correct
+incumbency status.
+
+- Using ggplot, make a density plot of the log-odds (logit) colored/grouped by your binary outcome variable (3)</code></pre>
+<pre class="r"><code>#drop probs from our data frame
+congress &lt;- congress %&gt;% dplyr::select(-c(probs))
+#calculate logit
+logit &lt;- predict(log_fit, type=&quot;link&quot;)
+ggplot(congress, aes(x = logit, fill=as.factor(incumbent))) + geom_density(alpha=0.25) + 
+  guides(fill=guide_legend(title=&quot;Incumbency of Congressperson&quot;))</code></pre>
+<p><img src="public/project/project2_files/figure-html/unnamed-chunk-13-1.png" width="768" style="display: block; margin: auto;" /></p>
+<pre><code>- Generate an ROC curve (plot) and calculate AUC (either manually or with a package); interpret (5)</code></pre>
+<pre class="r"><code>ROCplot</code></pre>
+<p><img src="public/project/project2_files/figure-html/unnamed-chunk-14-1.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>calc_auc(ROCplot)</code></pre>
+<pre><code>##   PANEL group       AUC
+## 1     1    -1 0.7333967</code></pre>
+<p><br>
+Our AUC allows us to visualize how well our predictions are on our observations, and the value comes out a pretty fair value
+at around 0.727.</p>
+<ul>
+<li><p><strong>6. (25 pts)</strong> Perform a logistic regression predicting the same binary response variable from <em>ALL</em> of the rest of your variables (the more, the better!)</p>
+<ul>
+<li>Fit model, compute in-sample classification diagnostics (Accuracy, Sensitivity, Specificity, Precision, AUC), and interpret (5)</li>
+</ul></li>
+</ul>
+<pre class="r"><code>congress &lt;- congress %&gt;% dplyr::select(-c(&quot;MCDay&quot;, &quot;MCYear&quot;, &quot;firstname&quot;, &quot;lastname&quot;))
+log_fit&lt;-glm(incumbent~., data=congress, family=&quot;binomial&quot;)
+coeftest(log_fit)</code></pre>
+<pre><code>## 
+## z test of coefficients:
+## 
+##                  Estimate  Std. Error z value Pr(&gt;|z|)
+## (Intercept)    8.8875e+03  8.2234e+03  1.0808   0.2798
+## chambersenate  4.5397e-01  3.2420e-01  1.4003   0.1614
+## birthday       1.2391e-02  1.0020e-02  1.2367   0.2162
+## stateAL        1.5794e+01  8.3675e+02  0.0189   0.9849
+## stateAR        2.1957e-02  1.3892e+00  0.0158   0.9874
+## stateAZ        7.4810e-01  1.4487e+00  0.5164   0.6056
+## stateCA        5.1515e-01  1.2375e+00  0.4163   0.6772
+## stateCO       -9.3560e-02  1.4732e+00 -0.0635   0.9494
+## stateCT       -2.7565e-01  1.4375e+00 -0.1917   0.8479
+## stateDE       -2.4250e-01  1.5128e+00 -0.1603   0.8726
+## stateFL        7.4386e-01  1.3215e+00  0.5629   0.5735
+## stateGA       -3.6649e-02  1.3259e+00 -0.0276   0.9779
+## stateHI       -6.2608e-01  1.4932e+00 -0.4193   0.6750
+## stateIA        4.1301e-01  1.4339e+00  0.2880   0.7733
+## stateID        1.6631e+01  1.3152e+03  0.0126   0.9899
+## stateIL        1.1634e+00  1.3020e+00  0.8936   0.3716
+## stateIN        3.7250e-01  1.2974e+00  0.2871   0.7740
+## stateKS        3.8789e-01  1.3806e+00  0.2810   0.7787
+## stateKY        1.8589e-01  1.3676e+00  0.1359   0.8919
+## stateLA        1.6528e+01  9.6691e+02  0.0171   0.9864
+## stateMA        2.0998e-02  1.3327e+00  0.0158   0.9874
+## stateMD        3.6981e-01  1.4306e+00  0.2585   0.7960
+## stateME        1.1221e-01  1.4775e+00  0.0759   0.9395
+## stateMI        1.1555e+00  1.2888e+00  0.8966   0.3700
+## stateMN        9.8148e-01  1.3615e+00  0.7209   0.4710
+## stateMO        9.3703e-01  1.3275e+00  0.7059   0.4803
+## stateMS        1.7662e+00  1.6045e+00  1.1008   0.2710
+## stateMT        1.5877e+01  1.4106e+03  0.0113   0.9910
+## stateNC       -2.2794e-01  1.3499e+00 -0.1689   0.8659
+## stateND       -4.6919e-01  1.6133e+00 -0.2908   0.7712
+## stateNE       -6.2210e-01  1.3917e+00 -0.4470   0.6549
+## stateNH       -1.6470e-02  1.4746e+00 -0.0112   0.9911
+## stateNJ        2.3712e+00  1.5906e+00  1.4908   0.1360
+## stateNM       -1.0200e+00  1.4272e+00 -0.7147   0.4748
+## stateNV        1.6537e+01  1.5457e+03  0.0107   0.9915
+## stateNY        1.3187e+00  1.2671e+00  1.0407   0.2980
+## stateOH        4.9070e-01  1.2723e+00  0.3857   0.6997
+## stateOK        2.0549e+00  1.6275e+00  1.2626   0.2067
+## stateOR        9.4999e-01  1.6149e+00  0.5883   0.5564
+## statePA        1.8099e-01  1.2620e+00  0.1434   0.8860
+## stateRI        1.6126e+01  1.4212e+03  0.0113   0.9909
+## stateSC        2.0604e-01  1.3809e+00  0.1492   0.8814
+## stateSD        9.6020e-01  1.6299e+00  0.5891   0.5558
+## stateTN        6.0988e-02  1.4654e+00  0.0416   0.9668
+## stateTX        1.3157e+00  1.3507e+00  0.9740   0.3300
+## stateUT       -2.7662e-01  1.4577e+00 -0.1898   0.8495
+## stateVA        7.0154e-01  1.3740e+00  0.5106   0.6096
+## stateVT       -2.0095e+00  1.9423e+00 -1.0346   0.3009
+## stateWA        4.6170e-01  1.4505e+00  0.3183   0.7502
+## stateWI        1.5231e+00  1.4241e+00  1.0695   0.2849
+## stateWV        2.4991e-01  1.4671e+00  0.1703   0.8647
+## stateWY        1.6738e+01  1.6869e+03  0.0099   0.9921
+## partyD         1.8610e+01  3.9562e+03  0.0047   0.9962
+## partyI         3.5111e+01  4.4748e+03  0.0078   0.9937
+## partyR         1.8330e+01  3.9562e+03  0.0046   0.9963
+## termyr        -4.5228e+00  3.6595e+00 -1.2359   0.2165
+## termday       -9.5896e-03  2.6963e-02 -0.3557   0.7221
+## age            4.6242e+00  3.6601e+00  1.2634   0.2064
+## district               NA          NA      NA       NA</code></pre>
+<pre class="r"><code>congress$probs &lt;- predict(log_fit, type=&quot;response&quot;)
+probs &lt;- predict(log_fit, type=&quot;response&quot;)
+table(prediction=as.numeric(probs&gt;.5), congress$incumbent)</code></pre>
+<pre><code>##           
+## prediction   0   1
+##          0  23  11
+##          1 120 846</code></pre>
+<pre class="r"><code>#sensitivity
+mean(congress[congress$incumbent==1,]$probs&gt;.5)</code></pre>
+<pre><code>## [1] 0.9871645</code></pre>
+<pre class="r"><code>#specificity
+mean(congress[congress$incumbent==0,]$probs&lt;.5)</code></pre>
+<pre><code>## [1] 0.1608392</code></pre>
+<pre class="r"><code>pred&lt;-ifelse(congress$probs&gt;.5,1,0)
+#accuracy
+mean(congress$incumbent==pred)</code></pre>
+<pre><code>## [1] 0.869</code></pre>
+<pre class="r"><code>#precision
+sum(congress$probs&gt;.5 &amp; congress$incumbent==1)/sum(congress$probs&gt;.5)</code></pre>
+<pre><code>## [1] 0.8757764</code></pre>
+<pre class="r"><code>congress &lt;- congress %&gt;% dplyr::select(-c(probs))
+ROCplot&lt;-ggplot(congress)+geom_roc(aes(d=incumbent,m=probs), n.cuts=0)+
+  geom_segment(aes(x=0,xend=1,y=0,yend=1),lty=2)
+#AUC is good at 0.801
+calc_auc(ROCplot)</code></pre>
+<pre><code>##   PANEL group      AUC
+## 1     1    -1 0.795987</code></pre>
+<pre><code>Our sensitivity, or TPR, had a slight decrease but is still great at around 0.98, our specificity increases slightly
+to 0.16 but is still pretty horrible overall, our accuracy is around the same at 0.855 which is still fairly good,
+our precision also increases a little bit and comes out to around 0.864. Our AUC experiences an increase and comes out
+to around 0.789 which means there is an increase in our ability to correctly predict the incumbency based on a given
+prediction.
+
+- Perform 10-fold (or repeated random sub-sampling) CV with the same model and report average out-of-sample classification diagnostics (Accuracy, Sensitivity, Specificity, Precision, and AUC); interpret AUC and compare with the in-sample metrics (10)</code></pre>
+<pre class="r"><code>#10 fold cv
+k=10
+data&lt;-congress[sample(nrow(congress)),] 
+folds&lt;-cut(seq(1:nrow(congress)),breaks=k,labels=F)
+
+diags&lt;-NULL
+for(i in 1:k){
+  train&lt;-data[folds!=i,] 
+  test&lt;-data[folds==i,]
+  
+  truth&lt;-test$incumbent
+  
+  fit&lt;-glm(incumbent~.,data=train,family=&quot;binomial&quot;)
+  fit$xlevels[[&quot;state&quot;]] &lt;- union(fit$xlevels[[&quot;state&quot;]], levels(as.factor(test$state)))
+  fit$xlevels[[&quot;party&quot;]] &lt;- union(fit$xlevels[[&quot;party&quot;]], levels(as.factor(test$party)))
+  probs&lt;-predict(fit,newdata = test,type=&quot;response&quot;)
+  
+  diags&lt;-rbind(diags,class_diag(probs,truth))
+}
+summarize_all(diags,mean) #average diagnostics across all k folds</code></pre>
+<pre><code>##    acc      sens      spec      ppv       f1       auc
+## 1 0.86 0.9836856 0.1172183 0.870044 0.923093 0.6418211</code></pre>
+<p>Overall, our accuracy, sensitivity, specificity, and precision all stay around the same compared to the in-sample
+metrics that we obtained, however; our out-of-sample diagnostic for AUC sees a decrease of around 14% compared to
+the value we obtained in our in-sample metrics (from around ~79 to ~65).</p>
+<pre><code>- Perform LASSO on the same model/variables. Choose lambda to give the simplest model whose accuracy is near that of the best (i.e., `lambda.1se`). Discuss which variables are retained. (5)</code></pre>
+<pre class="r"><code>#lasso 
+library(glmnet)
+response&lt;-as.matrix(congress$incumbent)
+congress_preds&lt;-model.matrix(incumbent~.,data=congress)[,-1]
+cv &lt;- cv.glmnet(congress_preds,response, family=&quot;binomial&quot;)
+lasso_fit&lt;-glmnet(congress_preds,response,family=&quot;binomial&quot;,lambda=cv$lambda.1se)
+coef(lasso_fit)</code></pre>
+<pre><code>## 59 x 1 sparse Matrix of class &quot;dgCMatrix&quot;
+##                       s0
+## (Intercept)   0.19669305
+## chambersenate .         
+## birthday      .         
+## stateAL       .         
+## stateAR       .         
+## stateAZ       .         
+## stateCA       .         
+## stateCO       .         
+## stateCT       .         
+## stateDE       .         
+## stateFL       .         
+## stateGA       .         
+## stateHI       .         
+## stateIA       .         
+## stateID       .         
+## stateIL       .         
+## stateIN       .         
+## stateKS       .         
+## stateKY       .         
+## stateLA       .         
+## stateMA       .         
+## stateMD       .         
+## stateME       .         
+## stateMI       .         
+## stateMN       .         
+## stateMO       .         
+## stateMS       .         
+## stateMT       .         
+## stateNC       .         
+## stateND       .         
+## stateNE       .         
+## stateNH       .         
+## stateNJ       .         
+## stateNM       .         
+## stateNV       .         
+## stateNY       .         
+## stateOH       .         
+## stateOK       .         
+## stateOR       .         
+## statePA       .         
+## stateRI       .         
+## stateSC       .         
+## stateSD       .         
+## stateTN       .         
+## stateTX       .         
+## stateUT       .         
+## stateVA       .         
+## stateVT       .         
+## stateWA       .         
+## stateWI       .         
+## stateWV       .         
+## stateWY       .         
+## partyD        .         
+## partyI        .         
+## partyR        .         
+## termyr        .         
+## termday       .         
+## age           0.03029571
+## district      .</code></pre>
+<pre class="r"><code>lasso_probs &lt;- predict(lasso_fit, congress_preds, type=&quot;response&quot;)</code></pre>
+<pre><code>The only variable that is retained from our lasso regression is age, which means that this is the most predictive
+variable in our model.
+
+- Perform 10-fold CV using only the variables lasso selected: compare model&#39;s out-of-sample AUC to that of your logistic regressions above (5)</code></pre>
+<pre class="r"><code># kfold with lasso
+k=10
+congress_preds&lt;-as.data.frame(congress_preds)
+congress_preds$incumbent&lt;-congress$incumbent
+data&lt;-congress_preds[sample(nrow(congress_preds)),] 
+folds&lt;-cut(seq(1:nrow(congress_preds)),breaks=k,labels=F)
+
+diags&lt;-NULL
+for(i in 1:k){
+  train&lt;-data[folds!=i,] 
+  test&lt;-data[folds==i,]
+  
+  truth&lt;-test$incumbent
+  
+  fit&lt;-glm(incumbent~age,data=train,family=&quot;binomial&quot;)
+  
+  probs&lt;-predict(fit,newdata = test,type=&quot;response&quot;)
+  
+  diags&lt;-rbind(diags,class_diag(probs,truth))
+}
+
+
+summarize_all(diags,mean) #average diagnostics across all k folds</code></pre>
+<pre><code>##     acc      sens      spec       ppv        f1       auc
+## 1 0.862 0.9977517 0.0590812 0.8629628 0.9248831 0.7253506</code></pre>
+<p>Overall our accuracy, sensitivity, specificity and precision values stay the same overall as the other logistic regression
+values above (although one might note that there is somewhat of a decrease in our specificity). The AUC for the lasso
+regression, however, does better than the logistic regression of our out-of-sample calculation using every predictor, but,
+still worse than the in-sample metric AUC. Just to summarize, the values for AUC for each model is as follows,
+In-sample: ~79, Out-of-sample (all predictors): ~65, Out-of-sample (lasso): ~73.</p>
+</div>
+<div id="where-do-i-find-data-again" class="section level2">
+<h2>Where do I find data again?</h2>
+<p>You can choose ANY datasets you want that meet the above criteria for variables and observations. You can make it as serious as you want, or not, but keep in mind that you will be incorporating this project into a portfolio webpage for your final in this course, so choose something that really reflects who you are, or something that you feel will advance you in the direction you hope to move career-wise, or something that you think is really neat, or whatever. On the flip side, regardless of what you pick, you will be performing all the same tasks, so it doesn’t end up being that big of a deal.</p>
+<p>If you are totally clueless and have no direction at all, log into the server and type</p>
+<pre class="r"><code>data(package = .packages(all.available = TRUE))</code></pre>
+<p>This will print out a list of <strong>ALL datasets in ALL packages</strong> installed on the server (a ton)! Scroll until your eyes bleed! Actually, do not scroll that much… To start with something more manageable, just run the command on your own computer, or just run <code>data()</code> to bring up the datasets in your current environment. To read more about a dataset, do <code>?packagename::datasetname</code>.</p>
+<p>If it is easier for you, and in case you don’t have many packages installed, a list of R datasets from a few common packages (also downloadable in CSV format) is given at the following website: <a href="https://vincentarelbundock.github.io/Rdatasets/datasets.html" class="uri">https://vincentarelbundock.github.io/Rdatasets/datasets.html</a>.</p>
+<ul>
+<li><p>A good package to download for fun/relevant data is <code>fivethiryeight</code>.
+Run <code>install.packages("fivethirtyeight"),</code> load the packages with <code>library(fivethirtyeight)</code>, run <code>data()</code>, and then scroll down to view the datasets. Here is an online list of all 127 datasets (with links to the 538 articles). Lots of sports, politics, current events, etc.</p></li>
+<li><p>If you have already started to specialize (e.g., ecology, epidemiology) you might look at discipline-specific R packages (vegan, epi, respectively). We will be using some tools from these packages later in the course, but they come with lots of data too, which you can explore according to the directions above</p></li>
+<li><p>However, you <em>emphatically DO NOT</em> have to use datasets available via R packages! In fact, I would much prefer it if you found the data from completely separate sources and brought them together (a much more realistic experience in the real world)! You can even reuse data from your SDS328M project, provided it shares a variable in common with other data which allows you to merge the two together (e.g., if you still had the timestamp, you could look up the weather that day: <a href="https://www.wunderground.com/history/" class="uri">https://www.wunderground.com/history/</a>). If you work in a research lab or have access to old data, you could potentially merge it with new data from your lab!</p></li>
+<li><p>Here is a curated list of interesting datasets (read-only spreadsheet format): <a href="https://docs.google.com/spreadsheets/d/1wZhPLMCHKJvwOkP4juclhjFgqIY8fQFMemwKL2c64vk/edit" class="uri">https://docs.google.com/spreadsheets/d/1wZhPLMCHKJvwOkP4juclhjFgqIY8fQFMemwKL2c64vk/edit</a></p></li>
+<li><p>Here is another great compilation of datasets: <a href="https://github.com/rfordatascience/tidytuesday" class="uri">https://github.com/rfordatascience/tidytuesday</a></p></li>
+<li><p>Here is the UCI Machine Learning Repository: <a href="https://archive.ics.uci.edu/ml/index.php" class="uri">https://archive.ics.uci.edu/ml/index.php</a></p>
+<ul>
+<li>See also <a href="https://en.wikipedia.org/wiki/List_of_datasets_for_machine-learning_research#Biological_data" class="uri">https://en.wikipedia.org/wiki/List_of_datasets_for_machine-learning_research#Biological_data</a></li>
+</ul></li>
+<li><p>Here is another good general place to look: <a href="https://www.kaggle.com/datasets" class="uri">https://www.kaggle.com/datasets</a></p></li>
+<li><p>To help narrow your search down or to see interesting variable ideas, check out <a href="https://www.tylervigen.com/spurious-correlations" class="uri">https://www.tylervigen.com/spurious-correlations</a>. This is the spurious correlations website, and it is fun, but if you look at the bottom of each plot you will see sources for the data. This is a good place to find very general data (or at least get a sense of where you can scrape data together from)!</p></li>
+<li><p>If you are interested in medical data, check out www.countyhealthrankings.org</p></li>
+<li><p>If you are interested in scraping UT data, they make <em>loads</em> of data public (e.g., beyond just professor CVs and syllabi). Check out all the data that is available in the statistical handbooks: <a href="https://reports.utexas.edu/statistical-handbook" class="uri">https://reports.utexas.edu/statistical-handbook</a></p></li>
+</ul>
+<div id="broader-data-sources" class="section level5">
+<h5>Broader data sources:</h5>
+<p><a href="www.data.gov">Data.gov</a> 186,000+ datasets!</p>
+<p><a href="Social%20Explorer">Social Explorer</a> is a nice interface to Census and American Community Survey data (more user-friendly than the government sites). May need to sign up for a free trial.</p>
+<p><a href="www.bls.gov">U.S. Bureau of Labor Statistics</a></p>
+<p><a href="www.census.gov">U.S. Census Bureau</a></p>
+<p><a href="www.gapminder.org/data">Gapminder</a>, data about the world.</p>
+<p>…</p>
+</div>
+</div>
+</div>

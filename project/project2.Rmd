@@ -347,6 +347,7 @@ for(i in 1:k){
   
   fit<-glm(incumbent~.,data=train,family="binomial")
   fit$xlevels[["state"]] <- union(fit$xlevels[["state"]], levels(as.factor(test$state)))
+  fit$xlevels[["party"]] <- union(fit$xlevels[["party"]], levels(as.factor(test$party)))
   probs<-predict(fit,newdata = test,type="response")
   
   diags<-rbind(diags,class_diag(probs,truth))
