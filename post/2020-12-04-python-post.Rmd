@@ -1,0 +1,25 @@
+---
+title: Python Post
+author: ''
+date: '2020-12-04'
+slug: python-post
+categories: []
+tags: []
+description: ''
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", warning = F, message = F,
+tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
+```
+
+```{r}
+library(reticulate)
+print("Hello World!")
+```
+
+
+```{python}
+print("Hello World!")
+```
+
