@@ -72,14 +72,32 @@
               
 <link href="/rmarkdown-libs/anchor-sections/anchor-sections.css" rel="stylesheet" />
 <script src="/rmarkdown-libs/anchor-sections/anchor-sections.js"></script>
-<img src="/post/2020-12-04-python-post_files/r-logo.png" alt="R logo." height=250 width=250 class="center"/>
-<img src="/post/2020-12-04-python-post_files/python-logo.png" alt="Python logo." height=250 width=250 class="center" />
+
 
 <pre class="r"><code>library(reticulate)
-print(&quot;Hello World!&quot;)</code></pre>
-<pre><code>## [1] &quot;Hello World!&quot;</code></pre>
-<pre class="python"><code>print(&quot;Hello World!&quot;)</code></pre>
-<pre><code>## Hello World!</code></pre>
+depth &lt;- quakes$depth
+mag &lt;- quakes$mag
+stations &lt;- quakes$stations
+hist(stations)</code></pre>
+<p><img src="/post/2020-12-04-python-post_files/figure-html/unnamed-chunk-1-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>Let’s pass the magnitude and depth data that we obtained in R to python and make a histogram from it!</p>
+<pre class="python"><code>import matplotlib.pyplot as plt
+
+#your code here
+plt.hist(r.depth)</code></pre>
+<pre><code>## (array([263., 112., 104.,  64.,  33.,  42.,  36., 118., 167.,  61.]), array([ 40., 104., 168., 232., 296., 360., 424., 488., 552., 616., 680.]), &lt;BarContainer object of 10 artists&gt;)</code></pre>
+<pre class="python"><code>plt.show()</code></pre>
+<p><img src="/post/2020-12-04-python-post_files/figure-html/unnamed-chunk-2-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="python"><code>plt.hist(r.mag)</code></pre>
+<pre><code>## (array([191., 186., 306., 119.,  90.,  70.,  23.,  10.,   4.,   1.]), array([4.  , 4.24, 4.48, 4.72, 4.96, 5.2 , 5.44, 5.68, 5.92, 6.16, 6.4 ]), &lt;BarContainer object of 10 artists&gt;)</code></pre>
+<pre class="python"><code>plt.show()</code></pre>
+<p><img src="/post/2020-12-04-python-post_files/figure-html/unnamed-chunk-2-2.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="python"><code>new_stations = []
+for station in r.stations:
+  new_stations.append(max(r.stations)-station)</code></pre>
+<p>Now let’s pass it back slightly modified, almost reversed, stations data and make a histogram to see the changes in R!</p>
+<pre class="r"><code>hist(py$new_stations)</code></pre>
+<p><img src="/post/2020-12-04-python-post_files/figure-html/unnamed-chunk-3-1.png" width="672" style="display: block; margin: auto;" /></p>
 
             
         <hr>         <div class="related-posts">

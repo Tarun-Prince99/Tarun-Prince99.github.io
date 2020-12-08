@@ -15,11 +15,30 @@ tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
 
 ```{r}
 library(reticulate)
-print("Hello World!")
+depth <- quakes$depth
+mag <- quakes$mag
+stations <- quakes$stations
+hist(stations)
 ```
 
+Let's pass the magnitude and depth data that we obtained in R to python and make a histogram from it!
 
 ```{python}
-print("Hello World!")
+import matplotlib.pyplot as plt
+
+#your code here
+plt.hist(r.depth)
+plt.show()
+plt.hist(r.mag)
+plt.show()
+
+new_stations = []
+for station in r.stations:
+  new_stations.append(max(r.stations)-station)
+
 ```
 
+Now let's pass it back slightly modified, almost reversed, stations data and make a histogram to see the changes in R!
+```{r}
+hist(py$new_stations)
+```

@@ -13,18 +13,8 @@
       <pubDate>Fri, 04 Dec 2020 00:00:00 +0000</pubDate>
       
       <guid>/post/2020/12/04/python-post/</guid>
-      <description>library(reticulate)print(&amp;quot;Hello World!&amp;quot;)## [1] &amp;quot;Hello World!&amp;quot;print(&amp;quot;Hello World!&amp;quot;)## Hello World!</description>
-    </item>
-    
-    <item>
-      <title>Hello R Markdown</title>
-      <link>/post/2015/07/23/hello-r-markdown/</link>
-      <pubDate>Thu, 23 Jul 2015 21:13:14 -0500</pubDate>
-      
-      <guid>/post/2015/07/23/hello-r-markdown/</guid>
-      <description>R MarkdownThis is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see http://rmarkdown.rstudio.com.
-You can embed an R code chunk like this:
-summary(cars)## speed dist ## Min. : 4.0 Min. : 2.00 ## 1st Qu.:12.0 1st Qu.: 26.00 ## Median :15.0 Median : 36.00 ## Mean :15.4 Mean : 42.</description>
+      <description>library(reticulate)depth &amp;lt;- quakes$depthmag &amp;lt;- quakes$magstations &amp;lt;- quakes$stationshist(stations)Let’s pass the magnitude and depth data that we obtained in R to python and make a histogram from it!
+import matplotlib.pyplot as plt#your code hereplt.hist(r.depth)## (array([263., 112., 104., 64., 33., 42., 36., 118., 167., 61.]), array([ 40., 104., 168., 232., 296., 360., 424., 488., 552., 616., 680.]), &amp;lt;BarContainer object of 10 artists&amp;gt;)plt.show()plt.</description>
     </item>
     
     <item>
