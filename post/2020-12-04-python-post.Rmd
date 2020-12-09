@@ -1,5 +1,5 @@
 ---
-title: Python Post
+title: Python/R Reticulate Post
 author: ''
 date: '2020-12-04'
 slug: python-post
@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", warning = 
 tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
 ```
 
+Let’s look at some Python and R code, and see how they interact with the reticulate package!
 ```{r}
 library(reticulate)
 depth <- quakes$depth

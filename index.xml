@@ -8,13 +8,14 @@
     <language>en-US</language>
     <lastBuildDate>Fri, 04 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Python Post</title>
+      <title>Python/R Reticulate Post</title>
       <link>/post/2020/12/04/python-post/</link>
       <pubDate>Fri, 04 Dec 2020 00:00:00 +0000</pubDate>
       
       <guid>/post/2020/12/04/python-post/</guid>
-      <description>library(reticulate)depth &amp;lt;- quakes$depthmag &amp;lt;- quakes$magstations &amp;lt;- quakes$stationshist(stations)Let’s pass the magnitude and depth data that we obtained in R to python and make a histogram from it!
-import matplotlib.pyplot as plt#your code hereplt.hist(r.depth)## (array([263., 112., 104., 64., 33., 42., 36., 118., 167., 61.]), array([ 40., 104., 168., 232., 296., 360., 424., 488., 552., 616., 680.]), &amp;lt;BarContainer object of 10 artists&amp;gt;)plt.show()plt.</description>
+      <description>Let’s look at some Python and R code, and see how they interact with the reticulate package!
+library(reticulate)depth &amp;lt;- quakes$depthmag &amp;lt;- quakes$magstations &amp;lt;- quakes$stationshist(stations)Let’s pass the magnitude and depth data that we obtained in R to python and make a histogram from it!
+import matplotlib.pyplot as plt#your code hereplt.hist(r.depth)## (array([263., 112., 104., 64., 33., 42., 36., 118., 167., 61.]), array([ 40.</description>
     </item>
     
     <item>
